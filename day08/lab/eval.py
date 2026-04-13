@@ -27,13 +27,17 @@ load_dotenv()
 from rag_answer import rag_answer
 from openai import OpenAI
 import time
+from dotenv import load_dotenv
+import os
 
 # =============================================================================
 # CAU HINH A/B
 # A/B Rule: Chi doi MOT bien moi lan
 # =============================================================================
 
-TEST_QUESTIONS_PATH = Path(__file__).parent / "data" / "grading_questions.json"
+load_dotenv()
+
+TEST_QUESTIONS_PATH = Path(__file__).parent / "data" / "test_questions.json"
 RESULTS_DIR = Path(__file__).parent / "results"
 LOGS_DIR = Path(__file__).parent / "logs"
 
@@ -91,10 +95,8 @@ def score_faithfulness(
       2: Nhiều thông tin không có trong retrieved chunks
       1: Câu trả lời không grounded, phần lớn là model bịa
     """
-    # Abstain đúng = faithful hoàn toàn, không cần hỏi LLM
-    ABSTAIN_PHRASE = "Tôi không có đủ dữ liệu"
-    if ABSTAIN_PHRASE in answer:
-        return {"score": 5, "notes": "Correct abstain — pipeline refused to hallucinate"}
+    # Sprint 4: Implement scoring
+    # Tạm thời trả về None (yêu cầu chấm thủ công)
     prompt = f"""
     Given these retrieved chunks: {chunks_used}
     And this answer: {answer}
@@ -104,9 +106,7 @@ def score_faithfulness(
     3: Mostly grounded, some information may come from model knowledge
     2: Much information is not in the retrieved chunks
     1: The answer is not grounded, mostly fabricated by the model
-    Return ONLY valid JSON.
-    No explanation. No markdown. No text before or after.
-    Output JSON: {{"score": <int>, "notes": "<string>"}}
+    Output JSON: {'score': <int>, 'reason': '<string>'}
     """
 
     content, latency = call_test_llm(
@@ -114,7 +114,6 @@ def score_faithfulness(
         temperature=0
     )
 
-    print(content)
     parsed = json.loads(content)
     return parsed
 
@@ -133,6 +132,8 @@ def score_answer_relevance(
       3: Trả lời có liên quan nhưng chưa đúng trọng tâm
       2: Trả lời lạc đề một phần
       1: Không trả lời câu hỏi
+
+    Sprint 4: Implement tương tự score_faithfulness
     """
     prompt = f"""
     Given the query: {query}
@@ -143,9 +144,7 @@ def score_answer_relevance(
     3: Answer is relevant but not focused
     2: Answer is partially off-topic
     1: No answer to the question
-    Return ONLY valid JSON.
-    No explanation. No markdown. No text before or after.
-    Output JSON: {{"score": <int>, "notes": "<string>"}}
+    Output JSON: {'score': <int>, 'reason': '<string>'}
     """
 
     content, latency = call_test_llm(
@@ -178,6 +177,7 @@ def score_context_recall(
         for c in chunks_used
     }
 
+    # Kiểm tra matching theo partial path (vì source paths có thể khác format)
     found = 0
     missing = []
     for expected in expected_sources:
@@ -215,6 +215,13 @@ def score_completeness(
       3: Thiếu một số thông tin quan trọng
       2: Thiếu nhiều thông tin quan trọng
       1: Thiếu phần lớn nội dung cốt lõi
+
+    Sprint 4:
+    Option 1 — Chấm thủ công: So sánh answer vs expected_answer và chấm.
+    Option 2 — LLM-as-Judge:
+        "Compare the model answer with the expected answer.
+         Rate completeness 1-5. Are all key points covered?
+         Output: {'score': int, 'missing_points': [str]}"
     """
     prompt = f"""
     Given the query: {query}
@@ -226,9 +233,7 @@ def score_completeness(
     3: Missing some important information.
     2: Missing a lot of important information.
     1: Missing most of the core content.
-    Return ONLY valid JSON.
-    No explanation. No markdown. No text before or after.
-    Output JSON: {{"score": <int>, "notes": "<string>"}}
+    Output JSON: {'score': int, 'missing_points': [str]}
     """
 
     content, latency = call_test_llm(
@@ -319,6 +324,16 @@ def run_pipeline(questions: List[Dict], config: Dict, label: str = "") -> List[D
         print(f"  Answer: {answer[:100]}...")
         print(f"  Faithful: {faith['score']} | Relevant: {relevance['score']} | "
               f"Recall: {recall['score']} | Complete: {complete['score']}")
+
+    grading_run = {
+        "run_id": f"{time.time()}_{question_id}",
+        "model_judge": os.getenv("LLM_MODEL"),
+        "dataset": "internal",
+        "samples": results
+    }
+    
+    with open(RESULTS_DIR / f"grading_run_{question_id}.json", "w", encoding="utf-8") as f:
+        json.dump(grading_run, f, ensure_ascii=False, indent=2)
 
     # Tính averages (bỏ qua None)
     for metric in ["faithfulness", "relevance", "context_recall", "completeness"]:
