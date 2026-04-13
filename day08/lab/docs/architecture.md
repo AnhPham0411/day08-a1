@@ -18,7 +18,7 @@
 ```
 
 **Mô tả ngắn gọn:**
-> TODO: Mô tả hệ thống trong 2-3 câu. Nhóm xây gì? Cho ai dùng? Giải quyết vấn đề gì?
+> Hệ thống RAG Pipeline chúng tôi xây dựng là một trợ lý ảo nội bộ hỗ trợ trả lời các câu hỏi về chính sách IT, HR và CS. Hệ thống được xây dựng cho nhân viên công ty sử dụng, giúp giảm thiểu rào cản tìm kiếm thông tin bằng cách trích xuất ngữ cảnh trực tiếp và tổng hợp câu trả lời tự nhiên qua mô hình ngôn ngữ lớn (LLM), đảm bảo tính chính xác thông qua trích dẫn nguồn.
 
 ---
 
@@ -27,22 +27,22 @@
 ### Tài liệu được index
 | File | Nguồn | Department | Số chunk |
 |------|-------|-----------|---------|
-| `policy_refund_v4.txt` | policy/refund-v4.pdf | CS | TODO |
-| `sla_p1_2026.txt` | support/sla-p1-2026.pdf | IT | TODO |
-| `access_control_sop.txt` | it/access-control-sop.md | IT Security | TODO |
-| `it_helpdesk_faq.txt` | support/helpdesk-faq.md | IT | TODO |
-| `hr_leave_policy.txt` | hr/leave-policy-2026.pdf | HR | TODO |
+| `policy_refund_v4.txt` | policy/refund-v4.pdf | CS | ~14 |
+| `sla_p1_2026.txt` | support/sla-p1-2026.pdf | IT | ~24 |
+| `access_control_sop.txt` | it/access-control-sop.md | IT Security | ~22 |
+| `it_helpdesk_faq.txt` | support/helpdesk-faq.md | IT | ~25 |
+| `hr_leave_policy.txt` | hr/leave-policy-2026.pdf | HR | ~21 |
 
 ### Quyết định chunking
 | Tham số | Giá trị | Lý do |
 |---------|---------|-------|
-| Chunk size | TODO tokens | TODO |
-| Overlap | TODO tokens | TODO |
-| Chunking strategy | Heading-based / paragraph-based | TODO |
+| Chunk size | 400 tokens (~1600 ký tự) | Kích thước lý tưởng giúp cân bằng việc chứa đủ ngữ cảnh mà không làm tải quá nhiều cho LLM context. |
+| Overlap | 80 tokens (~320 ký tự) | Tránh nguy cơ cụt bớt thông tin (lost context) giữa chừng khi cắt chunk đoạn câu. |
+| Chunking strategy | Heading-based / paragraph-based | Tách trước theo section `===`, nếu phần vượt giới hạn kích thước tiếp tục cắt linh hoạt nhờ cấu trúc ký tự xuống dòng `\n\n`. |
 | Metadata fields | source, section, effective_date, department, access | Phục vụ filter, freshness, citation |
 
 ### Embedding model
-- **Model**: TODO (OpenAI text-embedding-3-small / paraphrase-multilingual-MiniLM-L12-v2)
+- **Model**: OpenAI text-embedding-3-small
 - **Vector store**: ChromaDB (PersistentClient)
 - **Similarity metric**: Cosine
 
@@ -61,15 +61,14 @@
 ### Variant (Sprint 3)
 | Tham số | Giá trị | Thay đổi so với baseline |
 |---------|---------|------------------------|
-| Strategy | TODO (hybrid / dense) | TODO |
-| Top-k search | TODO | TODO |
-| Top-k select | TODO | TODO |
-| Rerank | TODO (cross-encoder / MMR) | TODO |
-| Query transform | TODO (expansion / HyDE / decomposition) | TODO |
+| Strategy | Hybrid (RRF) | Đổi từ Dense sang Hybrid |
+| Top-k search | 10 | Không đổi |
+| Top-k select | 5 | Tăng từ 3 lên 5 để thu thập nhiều chunk hơn |
+| Rerank | Không (RRF weighting đóng vai trò rerank) | Cập nhật `dense_weight=0.8`, `sparse_weight=0.2` |
+| Query transform | Không | Giữ nguyên |
 
 **Lý do chọn variant này:**
-> TODO: Giải thích tại sao chọn biến này để tune.
-> Ví dụ: "Chọn hybrid vì corpus có cả câu tự nhiên (policy) lẫn mã lỗi và tên chuyên ngành (SLA ticket P1, ERR-403)."
+> Chọn Hybrid kết hợp vì dữ liệu có chứa cả câu mô tả chung và rất nhiều danh từ chuyên ngành (như "P1", "ERR-403", "Flash Sale"). Tuy nhiên, tokenizer tiếng Việt của BM25 lại tách khoảng trắng (whitespace) dẫn đến nhiều từ nhiễu. Bằng cách thiết lập `dense_weight = 0.8` và `sparse_weight = 0.2`, hệ thống duy trì được tính chính xác dựa trên semantic (dense) cao của Model OpenAI, nhưng không làm mất lợi thế exact-match bổ trợ của keyword đến từ BM25.
 
 ---
 
@@ -96,7 +95,7 @@ Answer:
 ### LLM Configuration
 | Tham số | Giá trị |
 |---------|---------|
-| Model | TODO (gpt-4o-mini / gemini-1.5-flash) |
+| Model | gpt-4o-mini |
 | Temperature | 0 (để output ổn định cho eval) |
 | Max tokens | 512 |
 
@@ -118,19 +117,20 @@ Answer:
 
 ## 6. Diagram (tùy chọn)
 
-> TODO: Vẽ sơ đồ pipeline nếu có thời gian. Có thể dùng Mermaid hoặc drawio.
+Sơ đồ thể hiện chu trình xử lý Retrieval Pipeline của Baseline (Dense) và Variant (Hybrid).
 
 ```mermaid
 graph LR
     A[User Query] --> B[Query Embedding]
+    A --> BM25[BM25 Keyword Search]
     B --> C[ChromaDB Vector Search]
-    C --> D[Top-10 Candidates]
-    D --> E{Rerank?}
-    E -->|Yes| F[Cross-Encoder]
-    E -->|No| G[Top-3 Select]
-    F --> G
+    BM25 --> HL[Hybrid Logic]
+    C --> HL
+    HL --> RRF[RRF Combine: dense_weight 0.8 + sparse_weight 0.2]
+    RRF --> D[Top-10 Candidates]
+    D --> G[Top-5 Select]
     G --> H[Build Context Block]
     H --> I[Grounded Prompt]
-    I --> J[LLM]
+    I --> J[LLM gpt-4o-mini]
     J --> K[Answer + Citation]
 ```
