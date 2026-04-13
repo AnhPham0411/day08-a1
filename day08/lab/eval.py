@@ -25,12 +25,22 @@ from dotenv import load_dotenv
 load_dotenv()
 
 from rag_answer import rag_answer
+from openai import OpenAI
+import time
+from dotenv import load_dotenv
+import os
 
 # =============================================================================
 # CAU HINH A/B
 # A/B Rule: Chi doi MOT bien moi lan
 # =============================================================================
 
+load_dotenv()
+
+TEST_QUESTIONS_PATH = Path(__file__).parent / "data" / "test_questions.json"
+RESULTS_DIR = Path(__file__).parent / "results"
+
+# Cấu hình baseline (Sprint 2)
 BASELINE_CONFIG = {
     "retrieval_mode": "dense",
     "top_k_search":   10,
@@ -38,6 +48,24 @@ BASELINE_CONFIG = {
     "use_rerank":     False,
 }
 
+client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+
+def call_test_llm(messages, model=os.getenv("LLM_MODEL"), temperature=0):
+    start = time.time()
+
+    response = client.chat.completions.create(
+        model=model,
+        messages=messages,
+        temperature=temperature,
+    )
+
+    content = response.choices[0].message.content
+    latency = time.time() - start
+
+    return content, latency
+
+# Cấu hình variant (Sprint 3 — điều chỉnh theo lựa chọn của nhóm)
+# TODO Sprint 4: Cập nhật VARIANT_CONFIG theo variant nhóm đã implement
 VARIANT_CONFIG = {
     "retrieval_mode": "hybrid",   # Bien duy nhat thay doi
     "top_k_search":   10,
@@ -45,9 +73,204 @@ VARIANT_CONFIG = {
     "use_rerank":     False,
 }
 
-TEST_QUESTIONS_PATH = Path(__file__).parent / "data" / "test_questions.json"
-RESULTS_DIR         = Path(__file__).parent / "results"
-LOGS_DIR            = Path(__file__).parent / "logs"
+
+# =============================================================================
+# SCORING FUNCTIONS
+# 4 metrics từ slide: Faithfulness, Answer Relevance, Context Recall, Completeness
+# =============================================================================
+
+def score_faithfulness(
+    answer: str,
+    chunks_used: List[Dict[str, Any]],
+) -> Dict[str, Any]:
+    """
+    Faithfulness: Câu trả lời có bám đúng chứng cứ đã retrieve không?
+    Câu hỏi: Model có tự bịa thêm thông tin ngoài retrieved context không?
+
+    Thang điểm 1-5:
+      5: Mọi thông tin trong answer đều có trong retrieved chunks
+      4: Gần như hoàn toàn grounded, 1 chi tiết nhỏ chưa chắc chắn
+      3: Phần lớn grounded, một số thông tin có thể từ model knowledge
+      2: Nhiều thông tin không có trong retrieved chunks
+      1: Câu trả lời không grounded, phần lớn là model bịa
+
+    TODO Sprint 4 — Có 2 cách chấm:
+
+    Cách 1 — Chấm thủ công (Manual, đơn giản):
+        Đọc answer và chunks_used, chấm điểm theo thang trên.
+        Ghi lý do ngắn gọn vào "notes".
+
+    Cách 2 — LLM-as-Judge (Tự động, nâng cao):
+        Gửi prompt cho LLM:
+            "Given these retrieved chunks: {chunks}
+             And this answer: {answer}
+             Rate the faithfulness on a scale of 1-5.
+             5 = completely grounded in the provided context.
+             1 = answer contains information not in the context.
+             Output JSON: {'score': <int>, 'reason': '<string>'}"
+
+    Trả về dict với: score (1-5) và notes (lý do)
+    """
+    # Sprint 4: Implement scoring
+    # Tạm thời trả về None (yêu cầu chấm thủ công)
+    prompt = f"""
+    Given these retrieved chunks: {chunks_used}
+    And this answer: {answer}
+    Rate the faithfulness on a scale of 1-5.
+    5: All information in the answer is in the retrieved chunks
+    4: Almost entirely grounded, one small detail is uncertain
+    3: Mostly grounded, some information may come from model knowledge
+    2: Much information is not in the retrieved chunks
+    1: The answer is not grounded, mostly fabricated by the model
+    Output JSON: {'score': <int>, 'reason': '<string>'}
+    """
+
+    content, latency = call_test_llm(
+        [{"role": "user", "content": prompt}],
+        temperature=0
+    )
+
+    parsed = json.loads(content)
+    return parsed
+
+
+def score_answer_relevance(
+    query: str,
+    answer: str,
+) -> Dict[str, Any]:
+    """
+    Answer Relevance: Answer có trả lời đúng câu hỏi người dùng hỏi không?
+    Câu hỏi: Model có bị lạc đề hay trả lời đúng vấn đề cốt lõi không?
+
+    Thang điểm 1-5:
+      5: Answer trả lời trực tiếp và đầy đủ câu hỏi
+      4: Trả lời đúng nhưng thiếu vài chi tiết phụ
+      3: Trả lời có liên quan nhưng chưa đúng trọng tâm
+      2: Trả lời lạc đề một phần
+      1: Không trả lời câu hỏi
+
+    Sprint 4: Implement tương tự score_faithfulness
+    """
+    prompt = f"""
+    Given the query: {query}
+    And this answer: {answer}
+    Rate the answer relevance on a scale of 1-5.
+    5: Answer directly and completely to the question
+    4: Answer is correct but lacks some supporting details
+    3: Answer is relevant but not focused
+    2: Answer is partially off-topic
+    1: No answer to the question
+    Output JSON: {'score': <int>, 'reason': '<string>'}
+    """
+
+    content, latency = call_test_llm(
+        [{"role": "user", "content": prompt}],
+        temperature=0
+    )
+    
+    parsed = json.loads(content)
+    return parsed
+
+
+def score_context_recall(
+    chunks_used: List[Dict[str, Any]],
+    expected_sources: List[str],
+) -> Dict[str, Any]:
+    """
+    Context Recall: Retriever có mang về đủ evidence cần thiết không?
+    Câu hỏi: Expected source có nằm trong retrieved chunks không?
+
+    Đây là metric đo retrieval quality, không phải generation quality.
+
+    Cách tính đơn giản:
+        recall = (số expected source được retrieve) / (tổng số expected sources)
+
+    Ví dụ:
+        expected_sources = ["policy/refund-v4.pdf", "sla-p1-2026.pdf"]
+        retrieved_sources = ["policy/refund-v4.pdf", "helpdesk-faq.md"]
+        recall = 1/2 = 0.5
+
+    TODO Sprint 4:
+    1. Lấy danh sách source từ chunks_used
+    2. Kiểm tra xem expected_sources có trong retrieved sources không
+    3. Tính recall score
+    """
+    if not expected_sources:
+        # Câu hỏi không có expected source (ví dụ: "Không đủ dữ liệu" cases)
+        return {"score": None, "recall": None, "notes": "No expected sources"}
+
+    retrieved_sources = {
+        c.get("metadata", {}).get("source", "")
+        for c in chunks_used
+    }
+
+    # Kiểm tra matching theo partial path (vì source paths có thể khác format)
+    found = 0
+    missing = []
+    for expected in expected_sources:
+        # Kiểm tra partial match (tên file)
+        expected_name = expected.split("/")[-1].replace(".pdf", "").replace(".md", "")
+        matched = any(expected_name.lower() in r.lower() for r in retrieved_sources)
+        if matched:
+            found += 1
+        else:
+            missing.append(expected)
+
+    recall = found / len(expected_sources) if expected_sources else 0
+
+    return {
+        "score": round(recall * 5),  # Convert to 1-5 scale
+        "recall": recall,
+        "found": found,
+        "missing": missing,
+        "notes": f"Retrieved: {found}/{len(expected_sources)} expected sources" +
+                 (f". Missing: {missing}" if missing else ""),
+    }
+
+
+def score_completeness(
+    query: str,
+    answer: str,
+    expected_answer: str,
+) -> Dict[str, Any]:
+    """
+    Completeness: Answer có thiếu điều kiện ngoại lệ hoặc bước quan trọng không?
+    Câu hỏi: Answer có bao phủ đủ thông tin so với expected_answer không?
+
+    Thang điểm 1-5:
+      5: Answer bao gồm đủ tất cả điểm quan trọng trong expected_answer
+      4: Thiếu 1 chi tiết nhỏ
+      3: Thiếu một số thông tin quan trọng
+      2: Thiếu nhiều thông tin quan trọng
+      1: Thiếu phần lớn nội dung cốt lõi
+
+    Sprint 4:
+    Option 1 — Chấm thủ công: So sánh answer vs expected_answer và chấm.
+    Option 2 — LLM-as-Judge:
+        "Compare the model answer with the expected answer.
+         Rate completeness 1-5. Are all key points covered?
+         Output: {'score': int, 'missing_points': [str]}"
+    """
+    prompt = f"""
+    Given the query: {query}
+    Given the actual answer: {answer}
+    And expected answer: {expected_answer}
+    Rate the answer relevance between actual answer and expected answer on a scale of 1-5.
+    5: The actual answer includes all the important points in the expected answer.
+    4: Missing one small detail.
+    3: Missing some important information.
+    2: Missing a lot of important information.
+    1: Missing most of the core content.
+    Output JSON: {'score': int, 'missing_points': [str]}
+    """
+
+    content, latency = call_test_llm(
+        [{"role": "user", "content": prompt}],
+        temperature=0
+    )
+    
+    parsed = json.loads(content)
+    return parsed
 
 
 # =============================================================================
@@ -99,21 +322,26 @@ def run_pipeline(questions: List[Dict], config: Dict, label: str = "") -> List[D
         if context_recall is not None:
             print(f"  Context Recall: {'PASS' if context_recall else 'FAIL'}")
 
-        results.append({
-            "id":               qid,
-            "question":         question,
-            "expected_answer":  expected,
-            "expected_source":  exp_src,
-            "answer":           answer,
-            "sources":          sources,
-            "chunks_retrieved": len(chunks),
-            "retrieval_mode":   config["retrieval_mode"],
-            "context_recall":   context_recall,
-            "timestamp":        datetime.now().isoformat(),
-            # Scores se duoc dien o buoc cham diem
-            "faithfulness":     None,
-            "relevance":        None,
-        })
+        if verbose:
+            print(f"  Answer: {answer[:100]}...")
+            print(f"  Faithful: {faith['score']} | Relevant: {relevance['score']} | "
+                  f"Recall: {recall['score']} | Complete: {complete['score']}")
+
+    grading_run = {
+        "run_id": f"{time.time()}_{question_id}",
+        "model_judge": os.getenv("LLM_MODEL"),
+        "dataset": "internal",
+        "samples": results
+    }
+    
+    with open(RESULTS_DIR / f"grading_run_{question_id}.json", "w", encoding="utf-8") as f:
+        json.dump(grading_run, f, ensure_ascii=False, indent=2)
+
+    # Tính averages (bỏ qua None)
+    for metric in ["faithfulness", "relevance", "context_recall", "completeness"]:
+        scores = [r[metric] for r in results if r[metric] is not None]
+        avg = sum(scores) / len(scores) if scores else None
+        print(f"\nAverage {metric}: {avg:.2f}" if avg else f"\nAverage {metric}: N/A (chưa chấm)")
 
     return results
 
