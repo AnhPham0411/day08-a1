@@ -23,10 +23,16 @@ from pathlib import Path
 from typing import List, Dict, Any, Optional
 from datetime import datetime
 from rag_answer import rag_answer
+from openai import OpenAI
+import time
+from dotenv import load_dotenv
+import os
 
 # =============================================================================
 # CẤU HÌNH
 # =============================================================================
+
+load_dotenv()
 
 TEST_QUESTIONS_PATH = Path(__file__).parent / "data" / "test_questions.json"
 RESULTS_DIR = Path(__file__).parent / "results"
@@ -39,6 +45,22 @@ BASELINE_CONFIG = {
     "use_rerank": False,
     "label": "baseline_dense",
 }
+
+client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+
+def call_test_llm(messages, model=os.getenv("LLM_MODEL"), temperature=0):
+    start = time.time()
+
+    response = client.chat.completions.create(
+        model=model,
+        messages=messages,
+        temperature=temperature,
+    )
+
+    content = response.choices[0].message.content
+    latency = time.time() - start
+
+    return content, latency
 
 # Cấu hình variant (Sprint 3 — điều chỉnh theo lựa chọn của nhóm)
 # TODO Sprint 4: Cập nhật VARIANT_CONFIG theo variant nhóm đã implement
@@ -88,12 +110,27 @@ def score_faithfulness(
 
     Trả về dict với: score (1-5) và notes (lý do)
     """
-    # TODO Sprint 4: Implement scoring
+    # Sprint 4: Implement scoring
     # Tạm thời trả về None (yêu cầu chấm thủ công)
-    return {
-        "score": None,
-        "notes": "TODO: Chấm thủ công hoặc implement LLM-as-Judge",
-    }
+    prompt = f"""
+    Given these retrieved chunks: {chunks_used}
+    And this answer: {answer}
+    Rate the faithfulness on a scale of 1-5.
+    5: All information in the answer is in the retrieved chunks
+    4: Almost entirely grounded, one small detail is uncertain
+    3: Mostly grounded, some information may come from model knowledge
+    2: Much information is not in the retrieved chunks
+    1: The answer is not grounded, mostly fabricated by the model
+    Output JSON: {'score': <int>, 'reason': '<string>'}
+    """
+
+    content, latency = call_test_llm(
+        [{"role": "user", "content": prompt}],
+        temperature=0
+    )
+
+    parsed = json.loads(content)
+    return parsed
 
 
 def score_answer_relevance(
@@ -111,12 +148,27 @@ def score_answer_relevance(
       2: Trả lời lạc đề một phần
       1: Không trả lời câu hỏi
 
-    TODO Sprint 4: Implement tương tự score_faithfulness
+    Sprint 4: Implement tương tự score_faithfulness
     """
-    return {
-        "score": None,
-        "notes": "TODO: Implement score_answer_relevance",
-    }
+    prompt = f"""
+    Given the query: {query}
+    And this answer: {answer}
+    Rate the answer relevance on a scale of 1-5.
+    5: Answer directly and completely to the question
+    4: Answer is correct but lacks some supporting details
+    3: Answer is relevant but not focused
+    2: Answer is partially off-topic
+    1: No answer to the question
+    Output JSON: {'score': <int>, 'reason': '<string>'}
+    """
+
+    content, latency = call_test_llm(
+        [{"role": "user", "content": prompt}],
+        temperature=0
+    )
+    
+    parsed = json.loads(content)
+    return parsed
 
 
 def score_context_recall(
@@ -151,7 +203,7 @@ def score_context_recall(
         for c in chunks_used
     }
 
-    # TODO: Kiểm tra matching theo partial path (vì source paths có thể khác format)
+    # Kiểm tra matching theo partial path (vì source paths có thể khác format)
     found = 0
     missing = []
     for expected in expected_sources:
@@ -191,17 +243,33 @@ def score_completeness(
       2: Thiếu nhiều thông tin quan trọng
       1: Thiếu phần lớn nội dung cốt lõi
 
-    TODO Sprint 4:
+    Sprint 4:
     Option 1 — Chấm thủ công: So sánh answer vs expected_answer và chấm.
     Option 2 — LLM-as-Judge:
         "Compare the model answer with the expected answer.
          Rate completeness 1-5. Are all key points covered?
          Output: {'score': int, 'missing_points': [str]}"
     """
-    return {
-        "score": None,
-        "notes": "TODO: Implement score_completeness (so sánh với expected_answer)",
-    }
+    prompt = f"""
+    Given the query: {query}
+    Given the actual answer: {answer}
+    And expected answer: {expected_answer}
+    Rate the answer relevance between actual answer and expected answer on a scale of 1-5.
+    5: The actual answer includes all the important points in the expected answer.
+    4: Missing one small detail.
+    3: Missing some important information.
+    2: Missing a lot of important information.
+    1: Missing most of the core content.
+    Output JSON: {'score': int, 'missing_points': [str]}
+    """
+
+    content, latency = call_test_llm(
+        [{"role": "user", "content": prompt}],
+        temperature=0
+    )
+    
+    parsed = json.loads(content)
+    return parsed
 
 
 # =============================================================================
@@ -303,6 +371,16 @@ def run_scorecard(
             print(f"  Answer: {answer[:100]}...")
             print(f"  Faithful: {faith['score']} | Relevant: {relevance['score']} | "
                   f"Recall: {recall['score']} | Complete: {complete['score']}")
+
+    grading_run = {
+        "run_id": f"{time.time()}_{question_id}",
+        "model_judge": os.getenv("LLM_MODEL"),
+        "dataset": "internal",
+        "samples": results
+    }
+    
+    with open(RESULTS_DIR / f"grading_run_{question_id}.json", "w", encoding="utf-8") as f:
+        json.dump(grading_run, f, ensure_ascii=False, indent=2)
 
     # Tính averages (bỏ qua None)
     for metric in ["faithfulness", "relevance", "context_recall", "completeness"]:
