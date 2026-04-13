@@ -367,7 +367,7 @@ if __name__ == "__main__":
     print("Sprint 2+3 — Retrieval Owner: verify retrieval quality")
     print("=" * 60)
 
-    # Sau khi Tech Lead implement rag_answer(), mo comment de test:
+    # Đã implement rag_answer(), chạy test:
     test_queries = [
         "SLA xu ly ticket P1 la bao lau?",
         "Khach hang co the yeu cau hoan tien trong bao nhieu ngay?",
@@ -375,7 +375,12 @@ if __name__ == "__main__":
         "ERR-403-AUTH la loi gi?",   # Kiem tra abstain
     ]
 
-    print("\nCac ham retrieval da san sang. Tech Lead implement rag_answer() de chay end-to-end.")
-    print("\nRetrieval Owner: Chay compare_retrieval_strategies() sau khi Tech Lead xong:")
-    print("  compare_retrieval_strategies('SLA xu ly ticket P1 la bao lau?')")
-    print("  compare_retrieval_strategies('Approval Matrix la tai lieu nao?')")
+    print("\n--- TEST RAG_ANSWER (Sprint 2) ---")
+    for q in test_queries:
+        print(f"\n[Q]: {q}")
+        res = rag_answer(q, retrieval_mode="hybrid")
+        print(f"[A]: {res['answer']}")
+
+    print("\n--- CHAY COMPARE_RETRIEVAL_STRATEGIES (Sprint 3) ---")
+    compare_retrieval_strategies('SLA xu ly ticket P1 la bao lau?')
+    compare_retrieval_strategies('Approval Matrix la tai lieu nao?')
