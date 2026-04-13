@@ -1,0 +1,209 @@
+[
+  {
+    "id": "gq01",
+    "question": "SLA xử lý ticket P1 đã thay đổi như thế nào so với phiên bản trước?",
+    "expected_answer": "Phiên bản hiện tại (v2026.1, có hiệu lực từ 2026-01-15) đã cập nhật SLA P1 resolution từ 6 giờ xuống còn 4 giờ. Phiên bản trước (v2025.3) không thay đổi SLA này.",
+    "expected_source": [
+      "support/sla-p1-2026.pdf"
+    ],
+    "answer": "SLA xử lý ticket P1 đã thay đổi từ 6 giờ xuống 4 giờ trong phiên bản v2026.1 so với phiên bản trước đó [1].",
+    "sources": [
+      "support/sla-p1-2026.pdf",
+      "policy/refund-v4.pdf"
+    ],
+    "chunks_retrieved": 3,
+    "retrieval_mode": "hybrid",
+    "context_recall": true,
+    "timestamp": "2026-04-13T17:44:44.198941",
+    "faithfulness": 1,
+    "relevance": 1,
+    "completeness": 1,
+    "llm_note": "Câu trả lời chính xác và đầy đủ về sự thay đổi SLA."
+  },
+  {
+    "id": "gq02",
+    "question": "Khi làm việc remote, tôi phải dùng VPN và được kết nối trên tối đa bao nhiêu thiết bị?",
+    "expected_answer": "Khi làm việc remote và truy cập hệ thống nội bộ, VPN là bắt buộc (theo HR Leave Policy). Phần mềm VPN là Cisco AnyConnect và mỗi tài khoản được kết nối VPN trên tối đa 2 thiết bị cùng lúc (theo IT Helpdesk FAQ).",
+    "expected_source": [
+      "hr/leave-policy-2026.pdf",
+      "support/helpdesk-faq.md"
+    ],
+    "answer": "Khi làm việc remote, bạn phải sử dụng VPN và được kết nối trên tối đa 2 thiết bị cùng lúc [1].",
+    "sources": [
+      "support/helpdesk-faq.md",
+      "hr/leave-policy-2026.pdf"
+    ],
+    "chunks_retrieved": 3,
+    "retrieval_mode": "hybrid",
+    "context_recall": true,
+    "timestamp": "2026-04-13T17:44:46.789722",
+    "faithfulness": 1,
+    "relevance": 1,
+    "completeness": 1,
+    "llm_note": "Câu trả lời chính xác và đầy đủ về việc sử dụng VPN khi làm việc remote."
+  },
+  {
+    "id": "gq03",
+    "question": "Đơn hàng mua trong chương trình Flash Sale và đã kích hoạt sản phẩm có được hoàn tiền không?",
+    "expected_answer": "Không được hoàn tiền. Đơn hàng rơi vào hai ngoại lệ cùng lúc: (1) đơn hàng áp dụng mã giảm giá chương trình Flash Sale và (2) sản phẩm đã được kích hoạt — cả hai đều thuộc danh sách ngoại lệ không được hoàn tiền theo Điều 3 của chính sách.",
+    "expected_source": [
+      "policy/refund-v4.pdf"
+    ],
+    "answer": "Đơn hàng mua trong chương trình Flash Sale và đã kích hoạt sản phẩm sẽ không được hoàn tiền, vì sản phẩm đã được kích hoạt hoặc đăng ký tài khoản là một trong những ngoại lệ không được hoàn tiền [1].",
+    "sources": [
+      "policy/refund-v4.pdf"
+    ],
+    "chunks_retrieved": 3,
+    "retrieval_mode": "hybrid",
+    "context_recall": true,
+    "timestamp": "2026-04-13T17:44:49.137939",
+    "faithfulness": 1,
+    "relevance": 1,
+    "completeness": 1,
+    "llm_note": "Câu trả lời chính xác và đầy đủ về chính sách hoàn tiền."
+  },
+  {
+    "id": "gq04",
+    "question": "Nếu chọn nhận store credit thay vì hoàn tiền, tôi được bao nhiêu phần trăm so với số tiền gốc?",
+    "expected_answer": "Khách hàng có thể chọn nhận store credit (credit nội bộ) thay thế với giá trị 110% so với số tiền hoàn gốc. Đây là tùy chọn, không phải bắt buộc.",
+    "expected_source": [
+      "policy/refund-v4.pdf"
+    ],
+    "answer": "Nếu chọn nhận store credit thay vì hoàn tiền, bạn sẽ nhận được 110% so với số tiền gốc [1].",
+    "sources": [
+      "policy/refund-v4.pdf"
+    ],
+    "chunks_retrieved": 3,
+    "retrieval_mode": "hybrid",
+    "context_recall": true,
+    "timestamp": "2026-04-13T17:44:50.812417",
+    "faithfulness": 1,
+    "relevance": 1,
+    "completeness": 1,
+    "llm_note": "Câu trả lời chính xác và đầy đủ thông tin."
+  },
+  {
+    "id": "gq05",
+    "question": "Contractor từ bên ngoài công ty có thể được cấp quyền Admin Access không? Nếu có, cần bao nhiêu ngày và có yêu cầu đặc biệt gì?",
+    "expected_answer": "Có. Theo Access Control SOP, quy trình áp dụng cho tất cả nhân viên, contractor và third-party vendor. Admin Access (Level 4) cần phê duyệt từ IT Manager và CISO, thời gian xử lý 5 ngày làm việc, và có yêu cầu thêm: training bắt buộc về security policy.",
+    "expected_source": [
+      "it/access-control-sop.md"
+    ],
+    "answer": "Tôi không có đủ dữ liệu trong tài liệu nội bộ để trả lời câu hỏi này.",
+    "sources": [
+      "support/helpdesk-faq.md",
+      "it/access-control-sop.md"
+    ],
+    "chunks_retrieved": 3,
+    "retrieval_mode": "hybrid",
+    "context_recall": true,
+    "timestamp": "2026-04-13T17:44:52.370928",
+    "faithfulness": 1,
+    "relevance": 1,
+    "completeness": 0,
+    "llm_note": "Câu trả lời thiếu thông tin về thời gian và yêu cầu đặc biệt."
+  },
+  {
+    "id": "gq06",
+    "question": "Lúc 2 giờ sáng xảy ra sự cố P1, on-call engineer cần cấp quyền tạm thời cho một engineer xử lý incident. Quy trình cụ thể như thế nào và quyền này tồn tại bao lâu?",
+    "expected_answer": "On-call IT Admin có thể cấp quyền tạm thời (tối đa 24 giờ) sau khi được Tech Lead phê duyệt bằng lời. Sau 24 giờ, phải có ticket chính thức hoặc quyền bị thu hồi tự động. Mọi quyền tạm thời phải được ghi log vào hệ thống Security Audit. Liên hệ on-call qua hotline ext. 9999 (24/7) theo SLA P1.",
+    "expected_source": [
+      "it/access-control-sop.md",
+      "support/sla-p1-2026.pdf"
+    ],
+    "answer": "Quy trình cấp quyền tạm thời cho engineer xử lý incident trong trường hợp khẩn cấp P1 như sau:\n\n1. On-call IT Admin có thể cấp quyền tạm thời (tối đa 24 giờ) sau khi được Tech Lead phê duyệt bằng lời.\n2. Sau 24 giờ, phải có ticket chính thức hoặc quyền sẽ bị thu hồi tự động.\n3. Mọi quyền tạm thời phải được ghi log vào hệ thống Security Audit [1]. \n\nQuyền này tồn tại tối đa 24 giờ [1].",
+    "sources": [
+      "support/sla-p1-2026.pdf",
+      "it/access-control-sop.md"
+    ],
+    "chunks_retrieved": 3,
+    "retrieval_mode": "hybrid",
+    "context_recall": true,
+    "timestamp": "2026-04-13T17:44:55.554511",
+    "faithfulness": 1,
+    "relevance": 1,
+    "completeness": 1,
+    "llm_note": "Câu trả lời đầy đủ và chính xác về quy trình cấp quyền tạm thời cho engineer xử lý incident P1."
+  },
+  {
+    "id": "gq07",
+    "question": "Công ty sẽ phạt bao nhiêu nếu team IT vi phạm cam kết SLA P1?",
+    "expected_answer": "Tài liệu hiện có không quy định mức phạt hay hình thức xử lý khi vi phạm SLA P1. Tài liệu sla-p1-2026.pdf chỉ mô tả quy trình xử lý và SLA target, không có điều khoản về penalty.",
+    "expected_source": [],
+    "answer": "Tôi không co du du lieu trong tai lieu noi bo de tra loi cau hoi nay.",
+    "sources": [
+      "support/helpdesk-faq.md",
+      "support/sla-p1-2026.pdf"
+    ],
+    "chunks_retrieved": 3,
+    "retrieval_mode": "hybrid",
+    "context_recall": null,
+    "timestamp": "2026-04-13T17:44:57.070271",
+    "faithfulness": 1,
+    "relevance": 1,
+    "completeness": 0,
+    "llm_note": "Câu trả lời thiếu thông tin quan trọng về mức phạt cụ thể."
+  },
+  {
+    "id": "gq08",
+    "question": "Nhân viên phải báo trước bao nhiêu ngày để xin nghỉ phép năm? Con số này có giống với số ngày cần giấy tờ khi nghỉ ốm không?",
+    "expected_answer": "Nghỉ phép năm cần báo trước ít nhất 3 ngày làm việc qua HR Portal. Nghỉ ốm cũng liên quan đến mốc 3 ngày: nếu nghỉ TRÊN 3 ngày liên tiếp thì cần giấy tờ y tế từ bệnh viện. Hai con số '3 ngày' này áp dụng cho hai tình huống khác nhau.",
+    "expected_source": [
+      "hr/leave-policy-2026.pdf"
+    ],
+    "answer": "Nhân viên phải báo trước ít nhất 3 ngày làm việc để xin nghỉ phép năm [2]. Số ngày này không giống với số ngày cần giấy tờ khi nghỉ ốm, vì nghỉ ốm yêu cầu thông báo cho Line Manager trước 9:00 sáng ngày nghỉ [1].",
+    "sources": [
+      "it/access-control-sop.md",
+      "hr/leave-policy-2026.pdf"
+    ],
+    "chunks_retrieved": 3,
+    "retrieval_mode": "hybrid",
+    "context_recall": true,
+    "timestamp": "2026-04-13T17:44:59.164268",
+    "faithfulness": 1,
+    "relevance": 1,
+    "completeness": 1,
+    "llm_note": "Câu trả lời chính xác và đầy đủ thông tin về số ngày báo trước cho nghỉ phép năm và nghỉ ốm."
+  },
+  {
+    "id": "gq09",
+    "question": "Mật khẩu tài khoản công ty cần đổi định kỳ không? Nếu có, hệ thống sẽ nhắc nhở trước bao nhiêu ngày và đổi qua đâu?",
+    "expected_answer": "Có. Mật khẩu phải được thay đổi mỗi 90 ngày. Hệ thống sẽ nhắc nhở 7 ngày trước khi hết hạn. Để đổi mật khẩu, truy cập https://sso.company.internal/reset hoặc liên hệ Helpdesk qua ext. 9000.",
+    "expected_source": [
+      "support/helpdesk-faq.md"
+    ],
+    "answer": "Có, mật khẩu phải được thay đổi mỗi 90 ngày. Hệ thống sẽ nhắc nhở 7 ngày trước khi hết hạn [1].",
+    "sources": [
+      "support/helpdesk-faq.md",
+      "it/access-control-sop.md"
+    ],
+    "chunks_retrieved": 3,
+    "retrieval_mode": "hybrid",
+    "context_recall": true,
+    "timestamp": "2026-04-13T17:45:00.769609",
+    "faithfulness": 1,
+    "relevance": 1,
+    "completeness": 1,
+    "llm_note": "Câu trả lời đầy đủ và chính xác theo yêu cầu."
+  },
+  {
+    "id": "gq10",
+    "question": "Chính sách hoàn tiền hiện tại áp dụng cho đơn hàng đặt trước ngày 01/02/2026 không?",
+    "expected_answer": "Không. Chính sách hoàn tiền phiên bản 4 có hiệu lực từ ngày 01/02/2026 và chỉ áp dụng cho các đơn hàng được đặt kể từ ngày đó. Các đơn hàng đặt trước ngày này sẽ áp dụng theo chính sách hoàn tiền phiên bản 3.",
+    "expected_source": [
+      "policy/refund-v4.pdf"
+    ],
+    "answer": "Chính sách hoàn tiền hiện tại áp dụng cho đơn hàng đặt trước ngày 01/02/2026 không. Các đơn hàng đặt trước ngày có hiệu lực sẽ áp dụng theo chính sách hoàn tiền phiên bản 3 [1].",
+    "sources": [
+      "policy/refund-v4.pdf"
+    ],
+    "chunks_retrieved": 3,
+    "retrieval_mode": "hybrid",
+    "context_recall": true,
+    "timestamp": "2026-04-13T17:45:04.329683",
+    "faithfulness": 1,
+    "relevance": 1,
+    "completeness": 1,
+    "llm_note": "Câu trả lời chính xác và đầy đủ về chính sách hoàn tiền."
+  }
+]

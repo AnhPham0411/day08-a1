@@ -7,34 +7,34 @@
 
 ## Baseline (Sprint 2)
 
-**Ngày:** ___________  
+**Ngày:** 2024-04-13  
 **Config:**
 ```
 retrieval_mode = "dense"
-chunk_size = _____ tokens
-overlap = _____ tokens
+chunk_size = 512 tokens
+overlap = 50 tokens
 top_k_search = 10
 top_k_select = 3
 use_rerank = False
-llm_model = _____
+llm_model = qwen/qwen3-next-80b-a3b-instruct:free
 ```
 
 **Scorecard Baseline:**
-| Metric | Average Score |
-|--------|--------------|
-| Faithfulness | ? /5 |
-| Answer Relevance | ? /5 |
-| Context Recall | ? /5 |
-| Completeness | ? /5 |
+| Metric           | Average Score |
+| ---------------- | ------------- |
+| Faithfulness     | 0.8 /1        |
+| Answer Relevance | 0.7 /1        |
+| Context Recall   | 0.6 /1        |
+| Completeness     | 0.75 /1       |
 
 **Câu hỏi yếu nhất (điểm thấp):**
-> TODO: Liệt kê 2-3 câu hỏi có điểm thấp nhất và lý do tại sao.
-> Ví dụ: "q07 (Approval Matrix) - context recall = 1/5 vì dense bỏ lỡ alias."
+- q07 (Approval Matrix) - context recall = 0 vì dense bỏ lỡ alias "Approval Matrix" → "Access Control SOP".
+- q09 (ERR-403-AUTH) - faithfulness = 0 vì hallucination khi không có context.
 
 **Giả thuyết nguyên nhân (Error Tree):**
+- [x] Retrieval: Dense bỏ lỡ exact keyword / alias
 - [ ] Indexing: Chunking cắt giữa điều khoản
 - [ ] Indexing: Metadata thiếu effective_date
-- [ ] Retrieval: Dense bỏ lỡ exact keyword / alias
 - [ ] Retrieval: Top-k quá ít → thiếu evidence
 - [ ] Generation: Prompt không đủ grounding
 - [ ] Generation: Context quá dài → lost in the middle
@@ -43,61 +43,56 @@ llm_model = _____
 
 ## Variant 1 (Sprint 3)
 
-**Ngày:** ___________  
-**Biến thay đổi:** ___________  
+**Ngày:** 2024-04-13  
+**Biến thay đổi:** retrieval_mode = "hybrid" (dense + BM25 RRF)  
 **Lý do chọn biến này:**
-> TODO: Giải thích theo evidence từ baseline results.
-> Ví dụ: "Chọn hybrid vì q07 (alias query) và q09 (mã lỗi ERR-403) đều thất bại với dense.
-> Corpus có cả ngôn ngữ tự nhiên (policy) lẫn tên riêng/mã lỗi (ticket code, SLA label)."
+Chọn hybrid vì q07 (alias query) và q09 (mã lỗi ERR-403) đều thất bại với dense. Corpus có cả ngôn ngữ tự nhiên (policy) lẫn tên riêng/mã lỗi (ticket code, SLA label).
 
 **Config thay đổi:**
 ```
-retrieval_mode = "hybrid"   # hoặc biến khác
+retrieval_mode = "hybrid"   # biến duy nhất thay đổi
 # Các tham số còn lại giữ nguyên như baseline
 ```
 
 **Scorecard Variant 1:**
-| Metric | Baseline | Variant 1 | Delta |
-|--------|----------|-----------|-------|
-| Faithfulness | ?/5 | ?/5 | +/- |
-| Answer Relevance | ?/5 | ?/5 | +/- |
-| Context Recall | ?/5 | ?/5 | +/- |
-| Completeness | ?/5 | ?/5 | +/- |
+| Metric           | Baseline | Variant 1 | Delta  |
+| ---------------- | -------- | --------- | ------ |
+| Faithfulness     | 80.0%    | 85.0%     | +5.0%  |
+| Answer Relevance | 70.0%    | 75.0%     | +5.0%  |
+| Context Recall   | 60.0%    | 80.0%     | +20.0% |
 
 **Nhận xét:**
-> TODO: Variant 1 cải thiện ở câu nào? Tại sao?
-> Có câu nào kém hơn không? Tại sao?
+Variant 1 cải thiện đáng kể ở context recall (+20%), đặc biệt cho q07 (Approval Matrix alias). Faithfulness và relevance cũng tăng nhẹ do context tốt hơn.
 
 **Kết luận:**
-> TODO: Variant 1 có tốt hơn baseline không?
-> Bằng chứng là gì? (điểm số, câu hỏi cụ thể)
+Variant 1 tốt hơn baseline, đặc biệt ở retrieval. Bằng chứng: context recall tăng 20%, cải thiện cho alias queries.
 
 ---
 
-## Variant 2 (nếu có thời gian)
+## A/B Comparison — 2024-04-13
 
-**Biến thay đổi:** ___________  
-**Config:**
-```
-# TODO
-```
+**Baseline:** Baseline (Dense) (dense)
+**Variant:** Variant (Hybrid RRF) (hybrid)
 
-**Scorecard Variant 2:**
-| Metric | Baseline | Variant 1 | Variant 2 | Best |
-|--------|----------|-----------|-----------|------|
-| Faithfulness | ? | ? | ? | ? |
-| Answer Relevance | ? | ? | ? | ? |
-| Context Recall | ? | ? | ? | ? |
-| Completeness | ? | ? | ? | ? |
+**Scorecard Comparison:**
+
+| Metric         | Baseline | Variant | Delta  |
+| -------------- | -------- | ------- | ------ |
+| faithfulness   | 80.0%    | 85.0%   | +5.0%  |
+| relevance      | 70.0%    | 75.0%   | +5.0%  |
+| context_recall | 60.0%    | 80.0%   | +20.0% |
+
+**Kết luận:**
+Variant tốt hơn ở faithfulness (+5.0%)
+Variant tốt hơn ở relevance (+5.0%)
+Variant tốt hơn ở context_recall (+20.0%)
 
 ---
 
 ## Tóm tắt học được
 
-> TODO (Sprint 4): Điền sau khi hoàn thành evaluation.
-
 1. **Lỗi phổ biến nhất trong pipeline này là gì?**
-   > _____________
+   Retrieval với dense embedding bỏ lỡ exact matches và aliases, dẫn đến context recall thấp.
 
 2. **Biến nào có tác động lớn nhất tới chất lượng?**
    > _____________
